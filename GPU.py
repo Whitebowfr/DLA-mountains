@@ -18,8 +18,16 @@ def upscaleLinear(src: ti.template(), fact: int, newGrid: ti.template()):
                 newGrid[i*fact+k, j*fact+l] = (1 - dx) * (1 - dy) * src[x0, y0] + dx * (1 - dy) * src[x1, y0] + (1 - dx) * dy * src[x0, y1] + dx * dy * src[x1, y1]
 
 @ti.kernel
-def secondPassBlur(src: ti.template(), newGrid: ti.template()) -> ti.template() :
+def secondPassBlur(src: ti.template()) :
     for i, j in src:
-        newGrid[i, j] = (src[i, j] + src[i+1, j] + src[i, j+1] + src[i+1, j+1]) / 4
-    return newGrid
+        sum = 0.0
+        if i > 0 :
+            sum += src[i-1, j]
+        if i < src.shape[0] - 1 :
+            sum += src[i+1, j]
+        if j > 0 :
+            sum += src[i, j-1]
+        if j < src.shape[1] - 1 :
+            sum += src[i, j+1]
+        src[i, j] = sum / 4
         
