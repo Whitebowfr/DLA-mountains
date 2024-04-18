@@ -1,8 +1,12 @@
 import taichi as ti
 from random import randint
 import GPU
+import numpy as np
 
 ti.init(arch=ti.cpu)
+
+window = ti.ui.Window("DLA", res=(500, 500))
+canvas = window.get_canvas()
 
 def initDLA(N: int, desiredDensity: float):
     grid = ti.field(dtype=ti.f32, shape=(N, N))
@@ -11,10 +15,21 @@ def initDLA(N: int, desiredDensity: float):
     for _ in range(int(desiredDensity * N**2)):
         createPoint(grid, linkTree)
     print(upscaleGrid(linkTree, N, 2))
-    newGrid = ti.field(dtype=ti.f32, shape=(N*2, N*2))
-    GPU.upscaleLinear(grid, 2, newGrid)
-    ti.sync()
-    print(newGrid)
+    newGrid = ti.field(dtype=ti.f32, shape=(8*2, 8*2))
+    Grid = np.array([[0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 1, 1, 0],
+            [0, 1, 1, 0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0]])
+    GridB = ti.field(dtype=ti.f32, shape=(8, 8))
+    GridB.from_numpy(Grid)
+    GPU.upscaleLinear(GridB, 2, newGrid)
+    GPU.secondPassBlur(newGrid)
+    canvas.set_image(newGrid)
+    #print(newGrid)
     return grid
 
 def createPoint(grid, linkTree) :
@@ -53,6 +68,8 @@ def upscaleGrid(linkTree: dict, oldN: int, fact: int) :
             for i in range(fact+1) :
                 newGrid[key[0]*fact + i, key[1]*fact] = 1
     return newGrid
-        
 
-initDLA(10, 0.2)
+while True :
+    initDLA(10, 0.2)
+    window.show()
+
